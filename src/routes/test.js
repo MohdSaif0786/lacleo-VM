@@ -151,4 +151,27 @@ router.post('/snov', async (req, res) => {
   }
 });
 
+router.get('/dne-status', async (req, res) => {
+  try {
+    const unsyncedCustomers = await prisma.customer.count({
+      where: { email: { not: null }, dneSyncedAt: null }
+    });
+    const unsyncedOrders = await prisma.order.count({
+      where: { email: { not: null }, dneSyncedAt: null }
+    });
+    const unsyncedCheckouts = await prisma.checkout.count({
+      where: { email: { not: null }, dneSyncedAt: null }
+    });
+
+    res.json({
+      unsyncedCustomers,
+      unsyncedOrders,
+      unsyncedCheckouts
+    });
+  } catch (error) {
+    logger.error('DNE status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

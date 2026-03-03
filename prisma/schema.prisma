@@ -25,6 +25,7 @@ model Checkout {
   status      CheckoutStatus @default(pending)
   orderId     String?
   snovSentAt  DateTime?
+  dneSyncedAt DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -38,7 +39,8 @@ model Order {
   email      String?
   totalPrice Float?
   currency   String?
-  snovSentAt DateTime?
+  snovSentAt  DateTime?
+  dneSyncedAt DateTime?
   createdAt  DateTime @default(now())
 
   @@index([email])
@@ -51,6 +53,7 @@ model Customer {
   firstName          String?
   lastName           String?
   snovSentAt         DateTime?
+  dneSyncedAt        DateTime?
   createdAt          DateTime @default(now())
 
   @@index([email])

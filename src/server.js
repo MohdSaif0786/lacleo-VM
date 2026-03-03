@@ -2,6 +2,7 @@ const app = require('./app');
 const { config, validateEnv } = require('./config/env');
 const { logger } = require('./utils/logger');
 const { startAbandonedCartJob } = require('./jobs/abandonedCartJob');
+const { startDNEMigrationJob } = require('./jobs/dneMigrationJob');
 
 validateEnv();
 
@@ -13,8 +14,9 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Port: ${PORT}`);
   logger.info(`Mock Snov: ${config.snov.mock}`);
   logger.info(`====================================`);
-  
+
   startAbandonedCartJob();
+  startDNEMigrationJob();
 });
 
 process.on('SIGTERM', () => {

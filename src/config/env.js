@@ -9,7 +9,9 @@ function validateEnv() {
     'SNOV_CLIENT_SECRET',
     'SNOV_LIST_ABANDONED',
     'SNOV_LIST_UPSELL',
-    'SNOV_LIST_WELCOME'
+    'SNOV_LIST_WELCOME',
+    'SNOV_DNE_WELCOME',
+    'SNOV_DNE_UPSELL'
   ];
 
   const missing = required.filter(key => !process.env[key]);
@@ -35,7 +37,9 @@ const config = {
     lists: {
       abandoned: process.env.SNOV_LIST_ABANDONED,
       upsell: process.env.SNOV_LIST_UPSELL,
-      welcome: process.env.SNOV_LIST_WELCOME
+      welcome: process.env.SNOV_LIST_WELCOME,
+      dneWelcome: process.env.SNOV_DNE_WELCOME,
+      dneUpsell: process.env.SNOV_DNE_UPSELL
     },
     mock: process.env.MOCK_SNOV === 'true'
   },

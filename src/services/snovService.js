@@ -34,8 +34,13 @@ class SnovService {
       logger.info('Snov.io access token obtained successfully');
       return this.accessToken;
     } catch (error) {
-      logger.error('Failed to get Snov.io access token:', error.response?.data || error.message);
-      throw new Error('Failed to authenticate with Snov.io');
+      const errorData = error.response?.data;
+      if (error.response?.status === 429 || (errorData && typeof errorData === 'string' && errorData.includes('rate is limited'))) {
+        logger.error('Snov.io API Rate Limit Hit in Auth:', errorData);
+      } else {
+        logger.error('Failed to get Snov.io access token:', errorData || error.message);
+      }
+      throw new Error(typeof errorData === 'string' && errorData.includes('rate is limited') ? 'Snov.io Rate Limit' : 'Failed to authenticate with Snov.io');
     }
   }
 
@@ -74,6 +79,19 @@ class SnovService {
       );
 
       logger.info(`SNOV SUCCESS → ${email}`, response.data);
+
+      // PART 3: DNE SYNC (Do not block main flow)
+      try {
+        const dneService = require('./dneService');
+        if (listId == config.snov.lists.welcome) {
+          await dneService.addToDNEList(config.snov.lists.dneWelcome, email);
+        } else if (listId == config.snov.lists.upsell) {
+          await dneService.addToDNEList(config.snov.lists.dneUpsell, email);
+        }
+      } catch (dneError) {
+        logger.error('SNOV DNE SYNC ERROR (NON-BLOCKING)', dneError.message);
+      }
+
       return response.data;
     } catch (error) {
       const errorData = error.response?.data;
@@ -81,6 +99,19 @@ class SnovService {
       // If prospect already exists, treat as success to prevent infinite retries
       if (error.response?.status === 422 && (errorData?.errors?.includes('already exists') || errorData?.errors === 'Prospect with same email already exists in your list')) {
         logger.info(`SNOV SUCCESS (ALREADY EXISTS) → ${email}`);
+
+        // PART 3: DNE SYNC (Do not block main flow)
+        try {
+          const dneService = require('./dneService');
+          if (listId == config.snov.lists.welcome) {
+            await dneService.addToDNEList(config.snov.lists.dneWelcome, email);
+          } else if (listId == config.snov.lists.upsell) {
+            await dneService.addToDNEList(config.snov.lists.dneUpsell, email);
+          }
+        } catch (dneError) {
+          logger.error('SNOV DNE SYNC ERROR (NON-BLOCKING)', dneError.message);
+        }
+
         return { success: true, alreadyExists: true };
       }
 
@@ -96,7 +127,7 @@ class SnovService {
   }
 
   async triggerAbandoned(email, firstName, lastName) {
-    const listId = process.env.SNOV_LIST_ABANDONED;
+    const listId = config.snov.lists.abandoned;
     if (!listId || listId === 'xxxxx') {
       logger.warn('SNOV_LIST_ABANDONED not configured, skipping');
       return { skipped: true };
@@ -105,7 +136,7 @@ class SnovService {
   }
 
   async triggerUpsell(email, firstName, lastName) {
-    const listId = process.env.SNOV_LIST_UPSELL;
+    const listId = config.snov.lists.upsell;
     if (!listId || listId === 'xxxxx') {
       logger.warn('SNOV_LIST_UPSELL not configured, skipping');
       return { skipped: true };
@@ -114,7 +145,7 @@ class SnovService {
   }
 
   async triggerWelcome(email, firstName, lastName) {
-    const listId = process.env.SNOV_LIST_WELCOME;
+    const listId = config.snov.lists.welcome;
     if (!listId || listId === 'xxxxx') {
       logger.warn('SNOV_LIST_WELCOME not configured, skipping');
       return { skipped: true };
