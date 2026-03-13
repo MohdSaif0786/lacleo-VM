@@ -2,46 +2,87 @@ const prisma = require('../config/prisma');
 const { logger } = require('../utils/logger');
 
 class CustomerService {
+
+  /**
+   * Create or update a Shopify customer
+   */
   async upsertCustomer(customerData) {
+    if (!customerData || !customerData.shopifyCustomerId) {
+      throw new Error('shopifyCustomerId is required');
+    }
+
     try {
+
+      const data = {
+        email: customerData.email || null,
+        firstName: customerData.firstName || null,
+        lastName: customerData.lastName || null,
+        phone: customerData.phone || null,
+        address: customerData.address
+          ? JSON.stringify(customerData.address)
+          : null
+      };
+
       const customer = await prisma.customer.upsert({
-        where: { shopifyCustomerId: customerData.shopifyCustomerId },
-        update: {
-          email: customerData.email,
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
-          address: customerData.address,
-          phone: customerData.phone
+        where: {
+          shopifyCustomerId: customerData.shopifyCustomerId
         },
+        update: data,
         create: {
           shopifyCustomerId: customerData.shopifyCustomerId,
-          email: customerData.email,
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
-          address: customerData.address,
-          phone: customerData.phone
+          ...data
         }
       });
 
-      logger.info(`Customer upserted: ${customer.shopifyCustomerId} - ${customer.email}`);
+      logger.info(
+        `Customer saved | ShopifyID: ${customer.shopifyCustomerId} | Email: ${customer.email}`
+      );
+
       return customer;
+
     } catch (error) {
-      logger.error('Failed to upsert customer:', error);
+      logger.error('Error upserting customer', {
+        shopifyCustomerId: customerData.shopifyCustomerId,
+        error: error.message
+      });
+
       throw error;
     }
   }
 
+  /**
+   * Update Snov email sent timestamp
+   */
   async updateSnovSentAt(shopifyCustomerId) {
+    if (!shopifyCustomerId) {
+      throw new Error('shopifyCustomerId is required');
+    }
+
     try {
-      return await prisma.customer.update({
+
+      const result = await prisma.customer.updateMany({
         where: { shopifyCustomerId },
-        data: { snovSentAt: new Date() }
+        data: {
+          snovSentAt: new Date()
+        }
       });
+
+      if (result.count === 0) {
+        logger.warn(`Customer not found for ShopifyID: ${shopifyCustomerId}`);
+      }
+
+      return result;
+
     } catch (error) {
-      logger.error(`Failed to update snovSentAt for customer ${shopifyCustomerId}:`, error);
+      logger.error('Error updating snovSentAt', {
+        shopifyCustomerId,
+        error: error.message
+      });
+
       throw error;
     }
   }
+
 }
 
 module.exports = new CustomerService();
